@@ -18,14 +18,7 @@ TO_WHATSAPP = os.getenv("TO_WHATSAPP")
 RUN_INTERVAL = int(os.getenv("RUN_INTERVAL", "60"))  # seconds
 
 
-# print("--- Environment Variables Check (Including Defaults) ---")
-# print(f"GEMINI_API_KEY = {GEMINI_API_KEY}")
-# print(f"TWILIO_ACCOUNT_SID = {TWILIO_ACCOUNT_SID}")
-# print(f"TWILIO_AUTH_TOKEN = {TWILIO_AUTH_TOKEN}")
-# print(f"FROM_WHATSAPP = {FROM_WHATSAPP}")
-# print(f"TO_WHATSAPP = {TO_WHATSAPP}")
-# print(f"RUN_INTERVAL = {RUN_INTERVAL}")
-# print("-----------------------------------------------------")
+
 
 if not (GEMINI_API_KEY and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TO_WHATSAPP):
     raise SystemExit("Missing required environment variables. Please set GEMINI_API_KEY, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TO_WHATSAPP.")
