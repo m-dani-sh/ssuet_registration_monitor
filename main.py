@@ -69,6 +69,8 @@ def check_registration():
     try:
         result = analyze_page_text(cleaned_text)
         print("Gemini Output:", result)
+        send_whatsapp_message("🎉 Registration is OPEN! Go register your courses now: https://edusmartz.ssuet.edu.pk/studentportal/registration")
+
 
         return result
     except Exception as e:
