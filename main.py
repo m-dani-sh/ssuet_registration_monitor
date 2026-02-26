@@ -80,6 +80,10 @@ def send_whatsapp_message(body_text):
             to=TO_WHATSAPP
         )
         print(f"✅ WhatsApp sent! SID: {message.sid}")
+        # print("📊 Status:", message.status)
+        # print("📱 To:", message.to)
+        # print("📤 From:", message.from_)
+
     except Exception as e:
         print(f"‼️ WhatsApp error: {e}")
 
@@ -101,7 +105,7 @@ def analyze_page_text(text):
         return "CLOSED"
 
     # 2️⃣ Strong OPEN keywords (save API quota)
-    open_keywords = ["register now", "select courses", "enrollment active", "apply online"]
+    open_keywords = ["register now", "select courses", "enrollment active", "apply online","Min Credit Hours","Max Credit Hours","Course Code","Course Type","Section"]
 
     if any(keyword in text_lower for keyword in open_keywords):
         print("⚡ OPEN keyword detected (No AI needed)")
@@ -221,3 +225,4 @@ def main_loop():
 
 if __name__ == "__main__":
     main_loop()
+
