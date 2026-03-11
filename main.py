@@ -2,24 +2,11 @@ import os
 import time
 import requests
 from bs4 import BeautifulSoup
-import google.generativeai as genai
 from twilio.rest import Client
 from dotenv import load_dotenv
 
 # ================= LOAD ENV =================
 load_dotenv()
-
-# ================= GEMINI MULTI-ACCOUNT KEYS =================
-GEMINI_KEYS = [
-    os.getenv("GEMINI_API_KEY_1"),
-    os.getenv("GEMINI_API_KEY_2"),
-    os.getenv("GEMINI_API_KEY_3"),
-]
-
-# Remove empty keys
-GEMINI_KEYS = [key for key in GEMINI_KEYS if key]
-
-print(f"🔑 Loaded {len(GEMINI_KEYS)} Gemini API Keys (Different Accounts)")
 
 # ================= TWILIO CONFIG =================
 TWILIO_ACCOUNT_SID = os.getenv("ACCOUNT_SID")
@@ -30,45 +17,10 @@ TO_WHATSAPP = os.getenv("TO_WHATSAPP")
 twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 # ================= PORTAL CONFIG =================
-PORTAL_REG_NO = os.getenv("PORTAL_REG_NO")
-PORTAL_PASSWORD = os.getenv("PORTAL_PASSWORD")
+PORTAL_REG_NO =  os.getenv("PORTAL_REG_NO")
+PORTAL_PASSWORD =  os.getenv("PORTAL_PASSWORD")
 
 RUN_INTERVAL = int(os.getenv("RUN_INTERVAL", "60"))
-
-
-# ================= GEMINI ROTATION FUNCTION =================
-def call_gemini_with_rotation(prompt):
-    """
-    Try each Gemini key sequentially.
-    If one fails (quota/429), move to next.
-    If all fail, return ALL_KEYS_FAILED.
-    """
-
-    for index, api_key in enumerate(GEMINI_KEYS):
-        try:
-            print(f"🔑 Trying Gemini Key #{index + 1}")
-
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
-
-            response = model.generate_content(prompt)
-            result = response.text.strip().upper()
-
-            print(f"✅ Success with Key #{index + 1}")
-            return result
-
-        except Exception as e:
-            error_msg = str(e).lower()
-
-            if "429" in error_msg or "quota" in error_msg or "api key" in error_msg:
-                print(f"🚨 Key #{index + 1} quota exhausted. Switching...")
-                continue  # try next key
-            else:
-                print(f"❌ Non-quota error: {e}")
-                return "UNKNOWN"
-
-    print("💀 All Gemini keys from all accounts failed!")
-    return "ALL_KEYS_FAILED"
 
 
 # ================= WHATSAPP FUNCTION =================
@@ -80,9 +32,6 @@ def send_whatsapp_message(body_text):
             to=TO_WHATSAPP
         )
         print(f"✅ WhatsApp sent! SID: {message.sid}")
-        # print("📊 Status:", message.status)
-        # print("📱 To:", message.to)
-        # print("📤 From:", message.from_)
 
     except Exception as e:
         print(f"‼️ WhatsApp error: {e}")
@@ -92,51 +41,39 @@ def send_whatsapp_message(body_text):
 def analyze_page_text(text):
     text_lower = text.lower()
 
-    # 1️⃣ Strong CLOSED indicators
+    # Strong CLOSED indicators
     closed_indicators = [
         "active soon",
         "coming soon",
         "will be active soon",
-        "not yet started"
+        "not yet started",
+        "registration is closed"
     ]
 
     if any(indicator in text_lower for indicator in closed_indicators):
-        print("🔍 Found 'Coming Soon' → CLOSED")
+        print("🔍 Found CLOSED indicator → CLOSED")
         return "CLOSED"
 
-    # 2️⃣ Strong OPEN keywords (save API quota)
-    open_keywords = ["register now", "select courses", "enrollment active", "apply online","Min Credit Hours","Max Credit Hours","Course Code","Course Type","Section"]
+    # Strong OPEN keywords
+    open_keywords = [
+        "register now",
+        "select courses",
+        "enrollment active",
+        "apply online",
+        "min credit hours",
+        "max credit hours",
+        "course code",
+        "course type",
+        "section",
+        "available seats"
+    ]
 
     if any(keyword in text_lower for keyword in open_keywords):
-        print("⚡ OPEN keyword detected (No AI needed)")
+        print("⚡ OPEN keyword detected")
         return "OPEN"
-
-    # 3️⃣ AI Check (Only if needed)
-    prompt = f"""
-You are a university portal monitor.
-
-If registration is currently active and students can register now, reply OPEN.
-If registration is not active or coming soon, reply CLOSED.
-
-Reply with only one word:
-OPEN or CLOSED
-
-Text:
-{text[:4000]}
-"""
-
-    result = call_gemini_with_rotation(prompt)
-
-    # 4️⃣ Fallback if all keys fail
-    if result == "ALL_KEYS_FAILED" or result == "UNKNOWN":
-        print("🛡️ Using Rule-Based Fallback")
-        if any(keyword in text_lower for keyword in open_keywords):
-            return "OPEN"
-        return "CLOSED"
-
-    if "OPEN" in result:
-        return "OPEN"
-
+    
+    # Fallback to CLOSED if no strong indicators are found
+    print("🛡️ No strong OPEN indicators found, defaulting to CLOSED")
     return "CLOSED"
 
 
@@ -183,6 +120,9 @@ def check_registration():
         dash_text = BeautifulSoup(dash_response.text, "html.parser").get_text(" ", strip=True)
 
         combined_text = reg_text + " " + dash_text
+        # print("🔍 Analyzing page content...")
+        # print(f"📄 Combined text length: {len(combined_text)}")
+        # print(f"📄 Sample text snippet: {combined_text}")
 
         return analyze_page_text(combined_text)
 
@@ -193,6 +133,7 @@ def check_registration():
 
 # ================= MAIN LOOP =================
 def main_loop():
+
     alerted = False
 
     print(f"🚀 Monitor started. Checking every {RUN_INTERVAL} seconds")
@@ -225,4 +166,3 @@ def main_loop():
 
 if __name__ == "__main__":
     main_loop()
-
